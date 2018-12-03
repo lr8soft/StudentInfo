@@ -30,7 +30,7 @@ int databaseInit(sqlite3 *db) {
 	char command[] = "CREATE TABLE IF NOT EXISTS student (\
                 [id] INTEGER PRIMARY KEY AUTOINCREMENT,\
                 [name] TXT ,\
-                [grade] DOUBLE,\
+                [grade] TXT,\
                 [uuid] INTEGER,\
                 UNIQUE([uuid])\
                 );";
@@ -45,5 +45,14 @@ int databaseInit(sqlite3 *db) {
 	}
 }
 int addToDatabase(sqlite3 *db,InfoStruct info) {
+	char sql[0xffff]="INSERT INTO student (name,grade,uuid) \n \
+			   VALUES ('";
+	strcat(sql,info.name);
+	strcat(sql,"\',\'");
+	strcat(sql,info.grade);
+	strcat(sql,"\',");
+	strcat(sql,(char*)info.uuid);
+	strcat(sql,");");
+	printf("%s,sql");
 	return 1;
 }
