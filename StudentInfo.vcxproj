@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="SInfo_basicfunc.h" />
+    <ClInclude Include="SInfo_features.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

@@ -12,13 +12,46 @@ typedef struct {
 	int id;
 	int uuid;
 	char *name;
+	char *address;
 	double grade;
 }InfoStruct;
-char charTemp[0xff] = {0};
-InfoStruct infoTemp = {0,0,charTemp,0};
+char charTemp[0xff] = { 0 };
+extern InfoStruct infoTemp = {0,0,charTemp,charTemp,0};
+sqlite3 *loadDatabase(sqlite3 *db, const char *path);
+void setConfig(int std) {
+	FILE *fp;
+	char path[0xff] = {0};
+	memset(path,0,sizeof(path));
+	if (!std) {
+		printf("Enter the path of database:");
+		scanf("%s", path);
+		fp = fopen("data.dat","wb");
+		fwrite(path,sizeof(path),1,fp);
+		fclose(fp);
+	}
+	else if (std) {
+		fp = fopen("data.dat", "wb");
+		fwrite("database\\database.db", sizeof(path), 1, fp);
+		fclose(fp);
+	}
+}
+sqlite3 *readConfig(sqlite3 *db) {
+	FILE *fp;
+	char path[0xfff] = {0};
+	fp = fopen("data.dat","rb");
+	if (fp==NULL) {
+		return NULL;
+	}
+	else {
+		fread(path,sizeof(path),1,fp);
+		fclose(fp);
+		return loadDatabase(db,path);
+	}
+}
 void infoInit() {
 	infoTemp.id = 0;
 	memset(infoTemp.name,0,sizeof(infoTemp.name));
+	memset(infoTemp.address, 0, sizeof(infoTemp.address));
 	infoTemp.uuid = 0;
 	infoTemp.grade = 0;
 }
@@ -40,14 +73,15 @@ int databaseInit(sqlite3 *db) {
 	char *err_log=NULL;
 	char command[] = "CREATE TABLE IF NOT EXISTS student (\
                 [id] INTEGER PRIMARY KEY AUTOINCREMENT,\
-                [name] TXT ,\
+                [name] TXT,\
+				[address] TXT,\
                 [grade] DOUBLE,\
                 [uuid] INTEGER,\
                 UNIQUE([uuid])\
                 );";
 	int ret = sqlite3_exec(db,command,0,0,&err_log);
 	if (ret!=SQLITE_OK) {
-		printf("Can\'t init database!\nError Info:%s\n",err_log);
+		printf("\nCan\'t init database!\nError Info:%s\n",err_log);
 		sqlite3_close(db);
 		return 0;
 	}
@@ -56,21 +90,16 @@ int databaseInit(sqlite3 *db) {
 	}
 }
 int addToDatabase(sqlite3 *db,InfoStruct info) {
-	char sql[0xfff]="INSERT INTO student (name,grade,uuid)\nVALUES (";
+	char sql[0xfff] = {0};
 	char grade[0xff],uuid[0xff],id[0xff];
 	char *err_log = NULL;
 	sprintf(grade,"%lf",info.grade);
 	sprintf(uuid,"%d",info.uuid);
-	strcat(sql,"\'");
-	strcat(sql,info.name);
-	strcat(sql,"\',");
-	strcat(sql,grade);
-	strcat(sql,",");
-	strcat(sql,uuid);
-	strcat(sql,");");
+	sprintf(sql,"INSERT INTO student (name,address,grade,uuid)\n\
+VALUES (\'%s\',\'%s\',%s,%s);",info.name,info.address,grade,uuid);
 	int ret = sqlite3_exec(db,sql,0,0,&err_log);
 	if (ret!=SQLITE_OK) {
-		printf("Can\'t add new data!\nError Info:%s\n",err_log);
+		printf("\nCan\'t add new data!\nError Info:%s\n",err_log);
 		return 0;
 	}
 	else {
@@ -79,33 +108,33 @@ int addToDatabase(sqlite3 *db,InfoStruct info) {
 }
 int inquireCallBack(void *data,int nline,char **value,char **title) {
 	infoInit();
-	if (nline==4) {
+	if (nline==5) {
 		infoTemp.id = atoi(value[0]);//atoi:char*->int
 		strcpy(infoTemp.name, value[1]);
-		infoTemp.grade = strtod(value[2],NULL);//strtod:char*->double
-		infoTemp.uuid = atoi(value[3]);
+		strcpy(infoTemp.address, value[2]);
+		infoTemp.grade = strtod(value[3],NULL);//strtod:char*->double
+		infoTemp.uuid = atoi(value[4]);
 	}
 	else {
-		printf("Data format error!\n");
+		printf("\nData format error!\n");
 	}
 	return 0;
 }
-int inquireByUuid(sqlite3 *db,int uuid) {
-	char sql[0xfff] = "SELECT * FROM student WHERE uuid=";
-	char *error = NULL, uuid_char[0xff];
-	sprintf(uuid_char,"%d",uuid);
-	strcat(sql,uuid_char);
+int inquireBySection(sqlite3 *db,const char *type, const char *info) {
+	char sql[0xfff] = { 0 };//"SELECT * FROM student WHERE uuid=";
+	char *error = NULL;
+//	strcat(sql,uuid_char);
+	sprintf(sql,"SELECT * FROM student WHERE %s=%s",type,info);
 	int ret=sqlite3_exec(db,sql,inquireCallBack,0,&error);
 	if (ret!=SQLITE_OK) {
-		printf("Can\'t search those info!\nError Info:%s\n",error);
+		printf("\nCan\'t search those info!\nError Info:%s\n",error);
 	}
 	else if (infoTemp.id==0) {
-		printf("Uncorrect info!Can\'t search the data!\n");
+		printf("\nUncorrect info!Can\'t search the data!\n");
 		return 0;
 	}else {
 		return 1;
 	}
-	
 }
 int deleteByUuid(sqlite3 *db,int uuid) {
 	char sql[0xfff] = "DELETE from student WHERE uuid=";
@@ -114,10 +143,41 @@ int deleteByUuid(sqlite3 *db,int uuid) {
 	strcat(sql,char_uuid);
 	int ret = sqlite3_exec(db,sql,0,0,&error);
 	if (ret!=SQLITE_OK) {
-		printf("Can\'t delete info!\nError Info:%s\n",error);
+		printf("\nCan\'t delete info!\nError Info:%s\n",error);
 		return 0;
 	}
 	else {
 		return 1;
 	}
+}
+int updataInfoByUuid(sqlite3 *db,int uuid,const char *type,const char *info) {
+	char sql[0xfff] = { 0 }, uuid_char[20] = {0},*error=NULL;
+	sprintf(uuid_char,"%d",uuid);
+	if (strcmp(type,"name")==0|| strcmp(type, "address") == 0) {
+		sprintf(sql, "UPDATE student SET %s=\'%s\' WHERE uuid=%s",type,info,uuid_char);
+	}else {
+		sprintf(sql, "UPDATE student SET %s=%s WHERE uuid=%s",type, info, uuid_char);
+	}
+//	printf("%s\n",sql);
+	int ret = sqlite3_exec(db,sql,0,0,&error);
+	if (ret!=SQLITE_OK) {
+		printf("\nCan\'t update info!\nError Info:%s\n", error);
+		return 0;
+	}
+	else {
+		return 1;
+	}
+}
+int showAllCallback(void *data, int nline, char **value, char **title) {
+	int i,j=1;
+	for (i = 0; i < nline;i++) {
+		printf("[%s=%s]",title[i],value[i]);
+		if (j==5) printf("\n"),j=0;
+		j++;
+	}
+	return 0;
+}
+void showAllInfo(sqlite3 *db) {
+	char sql[] = "SELECT * FROM student";
+	sqlite3_exec(db,sql,showAllCallback,0,NULL);
 }
