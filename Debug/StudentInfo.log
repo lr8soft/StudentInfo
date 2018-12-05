@@ -1,5 +1,5 @@
 ﻿  StudentInfo.cpp
 d:\studentinfo\studentinfo\studentinfo\sinfo_basicfunc.h(94): warning C4101: “id”: 未引用的局部变量
-d:\studentinfo\studentinfo\studentinfo\studentinfo.cpp(57): warning C4326: “main”的返回类型应为“int”而非“void”
-d:\studentinfo\studentinfo\studentinfo\sinfo_basicfunc.h(138): warning C4715: “inquireBySection”: 不是所有的控件路径都返回值
+d:\studentinfo\studentinfo\studentinfo\studentinfo.cpp(129): warning C4102: “linput”: 未引用的标签
+d:\studentinfo\studentinfo\studentinfo\studentinfo.cpp(156): warning C4326: “main”的返回类型应为“int”而非“void”
   StudentInfo.vcxproj -> D:\StudentInfo\StudentInfo\Debug\StudentInfo.exe

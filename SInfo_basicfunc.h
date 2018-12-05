@@ -15,7 +15,7 @@ typedef struct {
 	char *address;
 	double grade;
 }InfoStruct;
-char charTemp[0xff] = { 0 };
+char charTemp[10] = { 0 };
 extern InfoStruct infoTemp = {0,0,charTemp,charTemp,0};
 sqlite3 *loadDatabase(sqlite3 *db, const char *path);
 void setConfig(int std) {
@@ -110,10 +110,15 @@ int inquireCallBack(void *data,int nline,char **value,char **title) {
 	infoInit();
 	if (nline==5) {
 		infoTemp.id = atoi(value[0]);//atoi:char*->int
-		strcpy(infoTemp.name, value[1]);
-		strcpy(infoTemp.address, value[2]);
+		infoTemp.name = (char*)malloc(sizeof(value[1]));
+		infoTemp.address = (char*)malloc(sizeof(value[2]));
+		strcpy(infoTemp.name , value[1]);
+		strcpy(infoTemp.address , value[2]);
+	//	memcpy(infoTemp.name, value[1],sizeof(value[1]));
+	//	memcpy(infoTemp.address, value[2], sizeof(value[2]));
 		infoTemp.grade = strtod(value[3],NULL);//strtod:char*->double
 		infoTemp.uuid = atoi(value[4]);
+	//	printf("[学号:%d 姓名:%s 住址:%s 总评:%lf]\n", infoTemp.uuid, infoTemp.name, infoTemp.address, infoTemp.grade);
 	}
 	else {
 		printf("\nData format error!\n");
@@ -123,13 +128,14 @@ int inquireCallBack(void *data,int nline,char **value,char **title) {
 int inquireBySection(sqlite3 *db,const char *type, const char *info) {
 	char sql[0xfff] = { 0 };//"SELECT * FROM student WHERE uuid=";
 	char *error = NULL;
+	if (info == NULL || type == NULL) return 0;
 //	strcat(sql,uuid_char);
 	sprintf(sql,"SELECT * FROM student WHERE %s=%s",type,info);
 	int ret=sqlite3_exec(db,sql,inquireCallBack,0,&error);
 	if (ret!=SQLITE_OK) {
 		printf("\nCan\'t search those info!\nError Info:%s\n",error);
-	}
-	else if (infoTemp.id==0) {
+		return 0;
+	}else if (infoTemp.id==0) {
 		printf("\nUncorrect info!Can\'t search the data!\n");
 		return 0;
 	}else {
@@ -153,6 +159,7 @@ int deleteByUuid(sqlite3 *db,int uuid) {
 int updataInfoByUuid(sqlite3 *db,int uuid,const char *type,const char *info) {
 	char sql[0xfff] = { 0 }, uuid_char[20] = {0},*error=NULL;
 	sprintf(uuid_char,"%d",uuid);
+	if (info == NULL || type == NULL) return 0;
 	if (strcmp(type,"name")==0|| strcmp(type, "address") == 0) {
 		sprintf(sql, "UPDATE student SET %s=\'%s\' WHERE uuid=%s",type,info,uuid_char);
 	}else {
